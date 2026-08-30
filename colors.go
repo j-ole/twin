@@ -3,8 +3,6 @@ package twin
 import (
 	"fmt"
 	"math"
-
-	"github.com/alecthomas/chroma/v2"
 )
 
 // Create using NewColor16(), NewColor256 or NewColor24Bit(), or use
@@ -242,9 +240,7 @@ func (color Color) downsampleTo(terminalColorCount ColorCount) Color {
 	return NewColor256(uint8(bestMatch))
 }
 
-// Wrapper for Chroma's color distance function.
-//
-// That one says it uses this formula: https://www.compuphase.com/cmetric.htm
+// Uses this formula: https://www.compuphase.com/cmetric.htm
 //
 // The result from this function has been scaled to 0.0-1.0, where 1.0 is the
 // distance between black and white.
@@ -256,21 +252,23 @@ func (color Color) Distance(other Color) float64 {
 	color = color.to24Bit()
 	other = other.to24Bit()
 
-	baseColor := chroma.NewColour(
-		uint8(color.colorValue()>>16&0xff),
-		uint8(color.colorValue()>>8&0xff),
-		uint8(color.colorValue()&0xff),
-	)
+	ar := int64(color.colorValue() >> 16 & 0xff)
+	ag := int64(color.colorValue() >> 8 & 0xff)
+	ab := int64(color.colorValue() & 0xff)
 
-	otherColor := chroma.NewColour(
-		uint8(other.colorValue()>>16&0xff),
-		uint8(other.colorValue()>>8&0xff),
-		uint8(other.colorValue()&0xff),
-	)
+	br := int64(other.colorValue() >> 16 & 0xff)
+	bg := int64(other.colorValue() >> 8 & 0xff)
+	bb := int64(other.colorValue() & 0xff)
+
+	rmean := (ar + br) / 2
+	r := ar - br
+	g := ag - bg
+	b := ab - bb
+	distance := math.Sqrt(float64((((512 + rmean) * r * r) >> 8) + 4*g*g + (((767 - rmean) * b * b) >> 8)))
 
 	// Magic constant comes from testing
 	maxDistance := 764.8333151739665
-	return baseColor.Distance(otherColor) / maxDistance
+	return distance / maxDistance
 }
 
 // With weight 0.0 you'll get only color. With weight 1.0 you'll get only other.

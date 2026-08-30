@@ -8,7 +8,9 @@ import (
 )
 
 func TestHyperlinkToNormal(t *testing.T) {
-	style := StyleDefault.WithHyperlink(new("http://example.com"))
+	url := "http://example.com"
+
+	style := StyleDefault.WithHyperlink(&url)
 	assert.Equal(t,
 		strings.ReplaceAll(StyleDefault.RenderUpdateFrom(style, ColorCount16), "\x1b", "ESC"),
 		"ESC]8;;ESC\\")

@@ -1,14 +1,11 @@
 package twin
 
 import (
-	"context"
-	"fmt"
 	"io"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
-
-	"golang.org/x/sync/semaphore"
 )
 
 type interruptableReader struct {
@@ -16,7 +13,8 @@ type interruptableReader struct {
 
 	interrupted atomic.Bool
 
-	pauseOrRead semaphore.Weighted
+	// Ensures we can either read or be paused, but not both at the same time
+	pauseOrRead sync.Mutex
 
 	// Re-apply the terminal mode we need. Replaced in tests, which have no
 	// terminal to observe; production code always wants reassertTtyInMode.
@@ -29,9 +27,6 @@ const interruptableReaderMaxWait = 100 * time.Millisecond
 func newInterruptableReader(base *os.File) interruptableReader {
 	return interruptableReader{
 		base: base,
-
-		// Ensures we can either read or be paused, but not both at the same time
-		pauseOrRead: *semaphore.NewWeighted(1),
 
 		reassert: reassertTtyInMode,
 	}
@@ -46,12 +41,9 @@ func (r *interruptableReader) Interrupt() {
 
 func (r *interruptableReader) SetPaused(paused bool) {
 	if paused {
-		err := r.pauseOrRead.Acquire(context.TODO(), 1)
-		if err != nil {
-			panic(fmt.Errorf("Failed to acquire interruptable reader pause semaphore for pausing: %w", err))
-		}
+		r.pauseOrRead.Lock()
 	} else {
-		r.pauseOrRead.Release(1)
+		r.pauseOrRead.Unlock()
 	}
 }
 
@@ -78,9 +70,9 @@ func (r *interruptableReader) Read(p []byte) (n int, err error) {
 		// Refs:
 		//   - https://github.com/walles/moor/issues/443
 		//   - https://github.com/walles/moor/issues/394
-		if r.pauseOrRead.TryAcquire(1) {
+		if r.pauseOrRead.TryLock() {
 			r.reassert(r.base)
-			r.pauseOrRead.Release(1)
+			r.pauseOrRead.Unlock()
 		}
 
 		// A reset while we're waiting here is fine: the wait is bounded, and
@@ -100,10 +92,7 @@ func (r *interruptableReader) Read(p []byte) (n int, err error) {
 			return 0, io.EOF
 		}
 
-		err = r.pauseOrRead.Acquire(context.TODO(), 1)
-		if err != nil {
-			panic(fmt.Errorf("Failed to acquire interruptable reader pause semaphore for reading: %w", err))
-		}
+		r.pauseOrRead.Lock()
 
 		// The acquire above can have waited out a whole pause, with every
 		// re-assert at the top of the loop skipped throughout it. Re-assert
@@ -121,16 +110,16 @@ func (r *interruptableReader) Read(p []byte) (n int, err error) {
 		// Zero timeout, so this is a poll rather than a wait.
 		ready, waitErr = r.waitForReadReady(0)
 		if waitErr != nil {
-			r.pauseOrRead.Release(1)
+			r.pauseOrRead.Unlock()
 			return 0, waitErr
 		}
 		if !ready {
-			r.pauseOrRead.Release(1)
+			r.pauseOrRead.Unlock()
 			continue
 		}
 
 		n, err = r.base.Read(p)
-		r.pauseOrRead.Release(1)
+		r.pauseOrRead.Unlock()
 
 		if r.interrupted.Load() {
 			log.Info("Interruptable reader interrupted while reading, returning fabricated EOF")
