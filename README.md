@@ -1,5 +1,11 @@
 Twin is a library for drawing to the terminal screen.
 
+# Installation
+
+```
+go get github.com/walles/twin
+```
+
 # Usage
 * Open a screen using `twin.NewScreen()` or one of its friends
 * Use `screen.SetCell()` to draw characters in an off-screen buffer
