@@ -5,29 +5,36 @@ import (
 	"math"
 )
 
-// Create using NewColor16(), NewColor256 or NewColor24Bit(), or use
-// ColorDefault.
+// Color represents a terminal color. Create one using NewColor16(),
+// NewColor256(), or NewColor24Bit(), or use ColorDefault.
 type Color uint32
 
+// ColorCount represents the terminal's color capability, one of the
+// ColorCount* constants.
 type ColorCount uint8
 
 const (
-	// Default foreground / background color
+	// ColorCountDefault is no explicit color: the terminal's own default
+	// foreground / background.
 	ColorCountDefault ColorCount = iota
 
+	// ColorCount8 is 3-bit ANSI color (8 colors):
 	// https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 	//
 	// Note that this type is only used for output, on input we store 3 bit
 	// colors as 4 bit colors since they map to the same values.
 	ColorCount8
 
+	// ColorCount16 is 4-bit ANSI color (16 colors):
 	// https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 	ColorCount16
 
+	// ColorCount256 is 8-bit ANSI color (256 colors):
 	// https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 	ColorCount256
 
-	// RGB: https://en.wikipedia.org/wiki/ANSI_escape_code#24-bit
+	// ColorCount24bit is an RGB color:
+	// https://en.wikipedia.org/wiki/ANSI_escape_code#24-bit
 	ColorCount24bit
 )
 
