@@ -30,6 +30,18 @@ func TestRealWorldDownsampling(t *testing.T) {
 	)
 }
 
+func TestRGBA(t *testing.T) {
+	base := NewColor24Bit(0x11, 0x22, 0x33)
+
+	red, green, blue, alpha := base.RGBA()
+	assert.Equal(t, red, uint32(0x1111))
+	assert.Equal(t, green, uint32(0x2222))
+	assert.Equal(t, blue, uint32(0x3333))
+
+	// See Opaque definition here: https://pkg.go.dev/image/color#pkg-variables
+	assert.Equal(t, alpha, uint32(0xffff))
+}
+
 func TestAnsiStringWithDownSampling(t *testing.T) {
 	actual := NewColor24Bit(0xd0, 0xd0, 0xd0).ansiString(colorTypeForeground, ColorCount256)
 	actual = strings.ReplaceAll(actual, "\x1b", "ESC")
