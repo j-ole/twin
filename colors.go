@@ -2,12 +2,17 @@ package twin
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 )
 
 // Color represents a terminal color. Create one using NewColor16(),
 // NewColor256(), or NewColor24Bit(), or use ColorDefault.
 type Color uint32
+
+// Compile-time trip wire: fail to build if Color stops implementing
+// color.Color.
+var _ color.Color = Color(0)
 
 // ColorCount represents the terminal's color capability, one of the
 // ColorCount* constants.
@@ -181,6 +186,24 @@ func (color Color) String() string {
 	}
 
 	panic(fmt.Errorf("unhandled color type %d", color.ColorCount()))
+}
+
+// RGBA implements color.Color. All twin colors are fully opaque, so alpha is
+// always 0xffff.
+//
+// ColorDefault has no defined RGB value. Calling RGBA() on it panics; this is
+// reserved / unspecified behavior and may change without a major release.
+func (color Color) RGBA() (r, g, b, a uint32) {
+	if color.ColorCount() == ColorCountDefault {
+		panic(fmt.Errorf("RGBA() not supported for the default color: %s", color.String()))
+	}
+
+	rgb := color.to24Bit()
+	red := rgb.colorValue() >> 16 & 0xff
+	green := rgb.colorValue() >> 8 & 0xff
+	blue := rgb.colorValue() & 0xff
+
+	return red | red<<8, green | green<<8, blue | blue<<8, 0xffff
 }
 
 func (color Color) to24Bit() Color {
