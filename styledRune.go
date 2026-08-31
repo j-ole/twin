@@ -19,16 +19,20 @@ func (styledRune StyledRune) String() string {
 	return fmt.Sprint("rune='", string(styledRune.Rune), "' ", styledRune.Style)
 }
 
-// How many screen cells will this rune cover? Most runes cover one, but some
-// like '午' will cover two.
+// Width returns how many screen cells this rune will cover. Most runes cover
+// one, but some like '午' will cover two.
 func (styledRune StyledRune) Width() int {
 	return uniseg.StringWidth(string(styledRune.Rune))
 }
 
+// Equal reports whether styledRune and other have the same rune and style.
 func (styledRune StyledRune) Equal(other StyledRune) bool {
 	return styledRune.Rune == other.Rune && styledRune.Style.Equal(other.Style)
 }
 
+// Printable reports whether char should be rendered as-is rather than
+// escaped, covering some cases that unicode.IsPrint() gets wrong for
+// terminal output.
 func Printable(char rune) bool {
 	if unicode.IsPrint(char) {
 		return true
