@@ -96,7 +96,7 @@ func NewColorHex(rgb uint32) Color {
 	return newColor(ColorCount24bit, rgb)
 }
 
-func (color Color) ColorCount() ColorCount {
+func (color Color) colorCount() ColorCount {
 	return ColorCount(color >> 24)
 }
 
@@ -127,7 +127,7 @@ func (color Color) ansiString(cType colorType, terminalColorCount ColorCount) st
 		panic(fmt.Errorf("unhandled color type %d", cType))
 	}
 
-	if color.ColorCount() == ColorCountDefault {
+	if color.colorCount() == ColorCountDefault {
 		return fmt.Sprint("\x1b[", typeMarker, "9m")
 	}
 
@@ -135,7 +135,7 @@ func (color Color) ansiString(cType colorType, terminalColorCount ColorCount) st
 
 	// We never create any ColorCount8 colors, but we store them as
 	// ColorCount16. So this if() statement will cover both.
-	if color.ColorCount() == ColorCount16 {
+	if color.colorCount() == ColorCount16 {
 		if cType == colorTypeUnderline {
 			// Only 256 and 24 bit colors supported for underline color
 			return ""
@@ -155,24 +155,24 @@ func (color Color) ansiString(cType colorType, terminalColorCount ColorCount) st
 		panic(fmt.Errorf("unhandled color16 value %d", value))
 	}
 
-	if color.ColorCount() == ColorCount256 {
+	if color.colorCount() == ColorCount256 {
 		value := color.colorValue()
 		if value <= 255 {
 			return fmt.Sprint("\x1b[", typeMarker, "8;5;", value, "m")
 		}
 	}
 
-	if color.ColorCount() == ColorCount24bit {
+	if color.colorCount() == ColorCount24bit {
 		red, green, blue := color.rgb8()
 
 		return fmt.Sprint("\x1b[", typeMarker, "8;2;", red, ";", green, ";", blue, "m")
 	}
 
-	panic(fmt.Errorf("unhandled color type=%d %s", color.ColorCount(), color.String()))
+	panic(fmt.Errorf("unhandled color type=%d %s", color.colorCount(), color.String()))
 }
 
 func (color Color) String() string {
-	switch color.ColorCount() {
+	switch color.colorCount() {
 	case ColorCountDefault:
 		return "Default color"
 
@@ -189,7 +189,7 @@ func (color Color) String() string {
 		return fmt.Sprintf("#%06x", color.colorValue())
 	}
 
-	panic(fmt.Errorf("unhandled color type %d", color.ColorCount()))
+	panic(fmt.Errorf("unhandled color type %d", color.colorCount()))
 }
 
 // RGBA implements color.Color. All twin colors are fully opaque, so alpha is
@@ -198,7 +198,7 @@ func (color Color) String() string {
 // ColorDefault has no defined RGB value. Calling RGBA() on it panics; this is
 // reserved / unspecified behavior and may change without a major release.
 func (color Color) RGBA() (r, g, b, a uint32) {
-	if color.ColorCount() == ColorCountDefault {
+	if color.colorCount() == ColorCountDefault {
 		panic(fmt.Errorf("RGBA() not supported for the default color: %s", color.String()))
 	}
 
@@ -211,24 +211,24 @@ func (color Color) RGBA() (r, g, b, a uint32) {
 }
 
 func (color Color) to24Bit() Color {
-	if color.ColorCount() == ColorCount24bit {
+	if color.colorCount() == ColorCount24bit {
 		return color
 	}
 
-	if color.ColorCount() == ColorCount8 || color.ColorCount() == ColorCount16 || color.ColorCount() == ColorCount256 {
+	if color.colorCount() == ColorCount8 || color.colorCount() == ColorCount16 || color.colorCount() == ColorCount256 {
 		r0, g0, b0 := color256ToRGB(uint8(color.colorValue()))
 		return NewColor24Bit(r0, g0, b0)
 	}
 
-	panic(fmt.Errorf("unhandled color type %d", color.ColorCount()))
+	panic(fmt.Errorf("unhandled color type %d", color.colorCount()))
 }
 
 func (color Color) downsampleTo(terminalColorCount ColorCount) Color {
-	if color.ColorCount() == ColorCountDefault || terminalColorCount == ColorCountDefault {
+	if color.colorCount() == ColorCountDefault || terminalColorCount == ColorCountDefault {
 		panic(fmt.Errorf("downsampling to or from default color not supported, %s -> %#v", color.String(), terminalColorCount))
 	}
 
-	if color.ColorCount() <= terminalColorCount {
+	if color.colorCount() <= terminalColorCount {
 		// Already low enough
 		return color
 	}
@@ -306,7 +306,7 @@ func (color Color) Distance(other Color) float64 {
 
 // With weight 0.0 you'll get only color. With weight 1.0 you'll get only other.
 func (color Color) Mix(other Color, weight float64) Color {
-	if color.ColorCount() == ColorCountDefault || other.ColorCount() == ColorCountDefault {
+	if color.colorCount() == ColorCountDefault || other.colorCount() == ColorCountDefault {
 		panic(fmt.Errorf("mixing to or from default color not supported, %s <-> %s", color.String(), other.String()))
 	}
 	if weight < 0.0 || weight > 1.0 {
