@@ -51,7 +51,8 @@ const (
 	colorTypeUnderline
 )
 
-// Reset to default foreground / background color
+// ColorDefault is the terminal's own default foreground / background color,
+// used when no explicit color has been set.
 var ColorDefault = newColor(ColorCountDefault, 0)
 
 // From: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
@@ -78,20 +79,28 @@ func newColor(colorCount ColorCount, value uint32) Color {
 	return Color(value | (uint32(colorCount) << 24))
 }
 
-// Four bit colors as defined here:
-// https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
+// NewColor16 creates a 4-bit ANSI color (16 colors) from a palette index
+// 0-15.
+//
+// Ref: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 func NewColor16(colorNumber0to15 int) Color {
 	return newColor(ColorCount16, uint32(colorNumber0to15))
 }
 
+// NewColor256 creates an 8-bit ANSI color (256 colors) from a palette index.
+//
+// Ref: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 func NewColor256(colorNumber uint8) Color {
 	return newColor(ColorCount256, uint32(colorNumber))
 }
 
+// NewColor24Bit creates a 24-bit RGB color from its red, green and blue
+// channels.
 func NewColor24Bit(red uint8, green uint8, blue uint8) Color {
 	return newColor(ColorCount24bit, (uint32(red)<<16)+(uint32(green)<<8)+(uint32(blue)<<0))
 }
 
+// NewColorHex creates a 24-bit RGB color from a packed 0xRRGGBB value.
 func NewColorHex(rgb uint32) Color {
 	return newColor(ColorCount24bit, rgb)
 }
@@ -274,10 +283,11 @@ func (color Color) downsampleTo(terminalColorCount ColorCount) Color {
 	return NewColor256(uint8(bestMatch))
 }
 
-// Uses this formula: https://www.compuphase.com/cmetric.htm
+// Distance approximates the perceptual difference between two colors, using
+// the formula from https://www.compuphase.com/cmetric.htm, scaled to
+// 0.0-1.0 where 1.0 is the distance between black and white.
 //
-// The result from this function has been scaled to 0.0-1.0, where 1.0 is the
-// distance between black and white.
+// Panics if either color is ColorDefault.
 func (color Color) Distance(other Color) float64 {
 	if color == ColorDefault || other == ColorDefault {
 		panic(fmt.Errorf("calculating distance to or from default color not supported, %s <-> %s", color.String(), other.String()))
@@ -304,7 +314,9 @@ func (color Color) Distance(other Color) float64 {
 	return distance / maxDistance
 }
 
-// With weight 0.0 you'll get only color. With weight 1.0 you'll get only other.
+// Mix blends color and other, weighted 0.0 (all color) to 1.0 (all other).
+//
+// Panics if either color is ColorDefault, or if weight is outside 0.0-1.0.
 func (color Color) Mix(other Color, weight float64) Color {
 	if color.colorCount() == ColorCountDefault || other.colorCount() == ColorCountDefault {
 		panic(fmt.Errorf("mixing to or from default color not supported, %s <-> %s", color.String(), other.String()))
