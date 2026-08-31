@@ -15,3 +15,10 @@ go get github.com/walles/twin
 * Close the screen when done using `screen.Close()`
 
 Twin opens an alternate screen buffer that it draws into.
+
+# TODO
+
+- Make Color implement stdlib's image.Color
+- Should we use https://pkg.go.dev/github.com/lucasb-eyer/go-colorful to compute
+  distances?
+- Enable revive's "exported" rule and validate comments for our public surface

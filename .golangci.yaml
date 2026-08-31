@@ -4,6 +4,12 @@ linters:
     - revive
     - usestdlibvars
   settings:
+    revive:
+      rules:
+        # TODO: Re-enable once the exported-API doc comments are in shape,
+        # see README.md.
+        - name: "exported"
+          disabled: true
     staticcheck:
       checks:
         - all
