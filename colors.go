@@ -104,6 +104,13 @@ func (color Color) colorValue() uint32 {
 	return uint32(color & 0xff_ff_ff)
 }
 
+// rgb8 extracts the red, green and blue channels as 0-255 values. The color
+// must already be 24 bit, e.g. via to24Bit().
+func (color Color) rgb8() (r, g, b uint8) {
+	value := color.colorValue()
+	return uint8(value >> 16), uint8(value >> 8), uint8(value)
+}
+
 // Render color into an ANSI string.
 //
 // Ref: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parameters
@@ -156,10 +163,7 @@ func (color Color) ansiString(cType colorType, terminalColorCount ColorCount) st
 	}
 
 	if color.ColorCount() == ColorCount24bit {
-		value := color.colorValue()
-		red := (value & 0xff0000) >> 16
-		green := (value & 0xff00) >> 8
-		blue := value & 0xff
+		red, green, blue := color.rgb8()
 
 		return fmt.Sprint("\x1b[", typeMarker, "8;2;", red, ";", green, ";", blue, "m")
 	}
@@ -198,10 +202,10 @@ func (color Color) RGBA() (r, g, b, a uint32) {
 		panic(fmt.Errorf("RGBA() not supported for the default color: %s", color.String()))
 	}
 
-	rgb := color.to24Bit()
-	red := rgb.colorValue() >> 16 & 0xff
-	green := rgb.colorValue() >> 8 & 0xff
-	blue := rgb.colorValue() & 0xff
+	red8, green8, blue8 := color.to24Bit().rgb8()
+	red := uint32(red8)
+	green := uint32(green8)
+	blue := uint32(blue8)
 
 	return red | red<<8, green | green<<8, blue | blue<<8, 0xffff
 }
@@ -279,16 +283,15 @@ func (color Color) Distance(other Color) float64 {
 		panic(fmt.Errorf("calculating distance to or from default color not supported, %s <-> %s", color.String(), other.String()))
 	}
 
-	color = color.to24Bit()
-	other = other.to24Bit()
+	ar8, ag8, ab8 := color.to24Bit().rgb8()
+	ar := int64(ar8)
+	ag := int64(ag8)
+	ab := int64(ab8)
 
-	ar := int64(color.colorValue() >> 16 & 0xff)
-	ag := int64(color.colorValue() >> 8 & 0xff)
-	ab := int64(color.colorValue() & 0xff)
-
-	br := int64(other.colorValue() >> 16 & 0xff)
-	bg := int64(other.colorValue() >> 8 & 0xff)
-	bb := int64(other.colorValue() & 0xff)
+	br8, bg8, bb8 := other.to24Bit().rgb8()
+	br := int64(br8)
+	bg := int64(bg8)
+	bb := int64(bb8)
 
 	rmean := (ar + br) / 2
 	r := ar - br
@@ -310,18 +313,8 @@ func (color Color) Mix(other Color, weight float64) Color {
 		panic(fmt.Errorf("weight must be 0.0-1.0, got %f", weight))
 	}
 
-	c1_24 := color.to24Bit()
-	c2_24 := other.to24Bit()
-
-	c1_value := c1_24.colorValue()
-	c1_red := (c1_value & 0xff0000) >> 16
-	c1_green := (c1_value & 0xff00) >> 8
-	c1_blue := c1_value & 0xff
-
-	c2_value := c2_24.colorValue()
-	c2_red := (c2_value & 0xff0000) >> 16
-	c2_green := (c2_value & 0xff00) >> 8
-	c2_blue := c2_value & 0xff
+	c1_red, c1_green, c1_blue := color.to24Bit().rgb8()
+	c2_red, c2_green, c2_blue := other.to24Bit().rgb8()
 
 	// Mix the channels separately
 	mixed_red := uint8(math.Round(float64(c2_red)*weight + float64(c1_red)*(1-weight)))
