@@ -5,8 +5,11 @@ import (
 	"strings"
 )
 
+// AttrMask is a bitmask of text attributes (bold, blink, ...), combined with
+// bitwise OR.
 type AttrMask uint
 
+// AttrMask bit values.
 const (
 	AttrBold AttrMask = 1 << iota
 	AttrBlink
@@ -19,6 +22,9 @@ const (
 	AttrNone AttrMask = 0 // Normal text
 )
 
+// Style is a foreground color, background color, underline color, and a set
+// of text attributes (bold, italic, ...), applied together to a piece of
+// text.
 type Style struct {
 	fg             Color
 	bg             Color
@@ -36,8 +42,12 @@ type Style struct {
 	hyperlinkURL *string
 }
 
+// StyleDefault is the zero value Style: default foreground and background
+// colors, no attributes, no hyperlink.
 var StyleDefault Style
 
+// Equal reports whether style and other render identically: same colors,
+// same attributes, and same hyperlink.
 func (style Style) Equal(other Style) bool {
 	if style.fg != other.fg {
 		return false
@@ -106,6 +116,8 @@ func (style Style) String() string {
 	return fmt.Sprint(strings.Join(attrNames, " "), " ", style.fg, " on ", style.bg, undelineSuffix)
 }
 
+// WithAttr returns a copy of style with attr added. AttrBold and AttrDim are
+// mutually exclusive, so adding one clears the other.
 func (style Style) WithAttr(attr AttrMask) Style {
 	result := Style{
 		fg:             style.fg,
@@ -126,11 +138,13 @@ func (style Style) WithAttr(attr AttrMask) Style {
 	return result
 }
 
+// HasAttr reports whether attr is set on style.
 func (style Style) HasAttr(attr AttrMask) bool {
 	return style.attrs.has(attr)
 }
 
-// Call with nil to remove the link
+// WithHyperlink returns a copy of style with its hyperlink URL set. Call with
+// nil to remove the link.
 func (style Style) WithHyperlink(hyperlinkURL *string) Style {
 	if hyperlinkURL != nil && *hyperlinkURL == "" {
 		// Use nil instead of empty string
@@ -155,14 +169,17 @@ func (style Style) HyperlinkURL() *string {
 	return style.hyperlinkURL
 }
 
+// Foreground returns style's foreground color.
 func (style Style) Foreground() Color {
 	return style.fg
 }
 
+// Background returns style's background color.
 func (style Style) Background() Color {
 	return style.bg
 }
 
+// WithoutAttr returns a copy of style with attr removed.
 func (style Style) WithoutAttr(attr AttrMask) Style {
 	return Style{
 		fg:             style.fg,
@@ -177,6 +194,8 @@ func (attr AttrMask) has(attrs AttrMask) bool {
 	return attr&attrs != 0
 }
 
+// WithBackground returns a copy of style with its background color set to
+// color.
 func (style Style) WithBackground(color Color) Style {
 	return Style{
 		fg:             style.fg,
@@ -187,6 +206,8 @@ func (style Style) WithBackground(color Color) Style {
 	}
 }
 
+// WithForeground returns a copy of style with its foreground color set to
+// color.
 func (style Style) WithForeground(color Color) Style {
 	return Style{
 		fg:             color,
@@ -197,6 +218,8 @@ func (style Style) WithForeground(color Color) Style {
 	}
 }
 
+// WithUnderlineColor returns a copy of style with its underline color set to
+// color.
 func (style Style) WithUnderlineColor(color Color) Style {
 	return Style{
 		fg:             style.fg,
@@ -207,10 +230,8 @@ func (style Style) WithUnderlineColor(color Color) Style {
 	}
 }
 
-// Emit an ANSI escape sequence switching from a previous style to the current
-// one.
-//
-//revive:disable-next-line:receiver-naming
+// RenderUpdateFrom returns the ANSI escape sequence needed to switch terminal
+// state from previous to style.
 func (style Style) RenderUpdateFrom(previous Style, terminalColorCount ColorCount) string {
 	if style == previous {
 		// Shortcut for the common case
