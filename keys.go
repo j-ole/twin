@@ -1,7 +1,9 @@
 package twin
 
+// KeyCode identifies a non-printable key the user pressed
 type KeyCode uint16
 
+// KeyCode values for non-printable keys, sent via EventKeyCode
 const (
 	KeyEscape KeyCode = iota
 	KeyEnter
