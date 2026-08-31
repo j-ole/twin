@@ -29,7 +29,7 @@ func (screen *FakeScreen) Close() {
 func (screen *FakeScreen) Clear() {
 	// This method's contents has been copied from UnixScreen.Clear()
 
-	empty := NewStyledRune(' ', StyleDefault)
+	empty := StyledRune{Rune: ' ', Style: StyleDefault}
 
 	width, height := screen.Size()
 	for row := range height {
@@ -59,7 +59,7 @@ func (screen *FakeScreen) SetCell(column int, row int, styledRune StyledRune) in
 
 	if column+styledRune.Width() > width {
 		// This cell is too wide for the screen, write a space instead
-		screen.cells[row][column] = NewStyledRune(' ', styledRune.Style)
+		screen.cells[row][column] = StyledRune{Rune: ' ', Style: styledRune.Style}
 		return styledRune.Width()
 	}
 
@@ -72,18 +72,18 @@ func (screen *FakeScreen) GetCell(column int, row int) StyledRune {
 	// This method's contents has been copied from UnixScreen.GetCell()
 
 	if column < 0 {
-		return NewStyledRune(' ', StyleDefault)
+		return StyledRune{Rune: ' ', Style: StyleDefault}
 	}
 	if row < 0 {
-		return NewStyledRune(' ', StyleDefault)
+		return StyledRune{Rune: ' ', Style: StyleDefault}
 	}
 
 	width, height := screen.Size()
 	if column >= width {
-		return NewStyledRune(' ', StyleDefault)
+		return StyledRune{Rune: ' ', Style: StyleDefault}
 	}
 	if row >= height {
-		return NewStyledRune(' ', StyleDefault)
+		return StyledRune{Rune: ' ', Style: StyleDefault}
 	}
 
 	return screen.cells[row][column]

@@ -2,7 +2,6 @@ package twin
 
 import (
 	"fmt"
-	"slices"
 	"unicode"
 
 	"github.com/rivo/uniseg"
@@ -14,13 +13,6 @@ import (
 type StyledRune struct {
 	Rune  rune
 	Style Style
-}
-
-func NewStyledRune(char rune, style Style) StyledRune {
-	return StyledRune{
-		Rune:  char,
-		Style: style,
-	}
 }
 
 func (styledRune StyledRune) String() string {
@@ -35,35 +27,6 @@ func (styledRune StyledRune) Width() int {
 
 func (styledRune StyledRune) Equal(other StyledRune) bool {
 	return styledRune.Rune == other.Rune && styledRune.Style.Equal(other.Style)
-}
-
-// Returns a slice of cells with trailing whitespace cells removed
-func TrimSpaceRight(runes []StyledRune) []StyledRune {
-	for i, cell := range slices.Backward(runes) {
-		if !unicode.IsSpace(cell.Rune) {
-			return runes[0 : i+1]
-		}
-
-		// That was a space, keep looking
-	}
-
-	// All whitespace, return empty
-	return []StyledRune{}
-}
-
-// Returns a slice of cells with leading whitespace cells removed
-func TrimSpaceLeft(runes []StyledRune) []StyledRune {
-	for i := range runes {
-		cell := runes[i]
-		if !unicode.IsSpace(cell.Rune) {
-			return runes[i:]
-		}
-
-		// That was a space, keep looking
-	}
-
-	// All whitespace, return empty
-	return []StyledRune{}
 }
 
 func Printable(char rune) bool {
