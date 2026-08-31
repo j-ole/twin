@@ -19,8 +19,6 @@ Twin opens an alternate screen buffer that it draws into.
 
 # TODO
 
-- Should we use https://pkg.go.dev/github.com/lucasb-eyer/go-colorful to compute
-  distances?
 - Enable revive's "exported" rule and validate comments for our public surface
 
 ## Done
