@@ -5,16 +5,30 @@ import (
 	"strconv"
 )
 
+// ProgressState is a terminal progress bar's state, one of the
+// ProgressState* constants.
 type ProgressState int
 
-// Numbers here match the ones from
+// ProgressState values. The numbers match the ones from
 // https://rockorager.dev/misc/osc-9-4-progress-bars/.
 const (
-	ProgressStateRemove        ProgressState = 0
-	ProgressStateSet           ProgressState = 1
-	ProgressStateError         ProgressState = 2
+	// ProgressStateRemove hides the progress bar.
+	ProgressStateRemove ProgressState = 0
+
+	// ProgressStateSet shows the progress bar at Progress.Percent.
+	ProgressStateSet ProgressState = 1
+
+	// ProgressStateError shows the progress bar, in an error color, at
+	// Progress.Percent.
+	ProgressStateError ProgressState = 2
+
+	// ProgressStateIndeterminate shows a busy progress bar with no known
+	// percentage.
 	ProgressStateIndeterminate ProgressState = 3
-	ProgressStatePause         ProgressState = 4
+
+	// ProgressStatePause shows the progress bar, in a paused color, at
+	// Progress.Percent.
+	ProgressStatePause ProgressState = 4
 )
 
 // Tell the terminal to remove the progress bar.
@@ -22,7 +36,7 @@ const (
 // See renderProgress() below for details.
 const progressRemoveSequence = "\x1b]9;4;0\x07"
 
-// Terminal progress bar state
+// Progress is a terminal progress bar's state and completion percentage.
 //
 // Ref: https://rockorager.dev/misc/osc-9-4-progress-bars/
 type Progress struct {
@@ -30,7 +44,11 @@ type Progress struct {
 	Percent int
 }
 
-// percent will be ignored for states Remove and Indeterminate
+// SetProgress sets the terminal's progress bar to state, showing percent
+// complete. percent is ignored for ProgressStateRemove and
+// ProgressStateIndeterminate, and clamped to 0-100 otherwise.
+//
+// Panics if state is not one of the ProgressState* constants.
 func (screen *UnixScreen) SetProgress(state ProgressState, percent int) {
 	if state < ProgressStateRemove || state > ProgressStatePause {
 		panic(fmt.Errorf("invalid progress state: %d", state))
