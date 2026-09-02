@@ -30,6 +30,24 @@ const (
 	MouseModeScroll
 )
 
+// Options configures a new Screen, created with NewScreen.
+//
+// The zero value auto-detects mouse mode and terminal color count from the
+// environment, and disables twin's own logging.
+type Options struct {
+	// MouseMode controls how mouse events are captured. Leave as
+	// MouseModeAuto to auto-detect based on the terminal.
+	MouseMode MouseMode
+
+	// TerminalColorCount overrides how many colors twin assumes the terminal
+	// supports. Leave as ColorCountDefault to auto-detect from the
+	// environment.
+	TerminalColorCount ColorCount
+
+	// Logger receives twin's own log messages. Leave nil to disable logging.
+	Logger Logger
+}
+
 type Screen interface {
 	// Close() restores terminal to normal state, must be called after you are
 	// done with your screen
@@ -157,41 +175,43 @@ type UnixScreen struct {
 //   - "M" marks the end of the mouse event.
 var mouseEventRegex = regexp.MustCompile("^\x1b\\[<([0-9]+);([0-9]+);([0-9]+)M")
 
-// NewScreen() requires Close() to be called after you are done with your new
-// screen, most likely somewhere in your shutdown code.
-func NewScreen() (Screen, error) {
-	return NewScreenWithMouseMode(MouseModeAuto)
-}
-
-func NewScreenWithMouseMode(mouseMode MouseMode) (Screen, error) {
-	terminalColorCount := ColorCount24bit
-	if os.Getenv("COLORTERM") != "truecolor" && strings.Contains(os.Getenv("TERM"), "256") {
-		// Covers "xterm-256color" as used by the macOS Terminal
-		terminalColorCount = ColorCount256
-	}
-	return NewScreenWithMouseModeAndColorCount(mouseMode, terminalColorCount)
-}
-
-func NewScreenWithMouseModeAndColorCount(mouseMode MouseMode, terminalColorCount ColorCount) (Screen, error) {
+// NewScreen creates a new Screen according to options. Passing the zero value
+// Options{} auto-detects mouse mode and terminal color count, and disables
+// twin's own logging.
+//
+// The returned Screen requires Close() to be called after you are done with
+// it, most likely somewhere in your shutdown code.
+func NewScreen(options Options) (Screen, error) {
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		return nil, fmt.Errorf("stdout (fd=%d) must be a terminal for paging to work", os.Stdout.Fd())
 	}
 
+	terminalColorCount := options.TerminalColorCount
+	if terminalColorCount == ColorCountDefault {
+		terminalColorCount = ColorCount24bit
+		if os.Getenv("COLORTERM") != "truecolor" && strings.Contains(os.Getenv("TERM"), "256") {
+			// Covers "xterm-256color" as used by the macOS Terminal
+			terminalColorCount = ColorCount256
+		}
+	}
+
+	if options.Logger != nil {
+		log = options.Logger
+	} else {
+		log = &noopLogger{}
+	}
+
 	screen := UnixScreen{
 		terminalColorCount: terminalColorCount,
-		mouseMode:          mouseMode,
+		mouseMode:          options.MouseMode,
 
-		// The number "80" here is from manual testing on my MacBook:
+		// Sized from manual testing on my MacBook: start
+		// "./moor.sh sample-files/large-git-log-patch.txt", then do a two
+		// finger flick initiating a momentum based scroll-up. If you get
+		// "Events buffer full" warnings, the buffer is too small.
 		//
-		// First, start "./moor.sh sample-files/large-git-log-patch.txt".
-		//
-		// Then do a two finger flick initiating a momentum based scroll-up.
-		//
-		// Now, if you get "Events buffer full" warnings, the buffer is too small.
-		//
-		// By this definition, 40 was too small, and 80 was OK.
-		//
-		// Bumped to 160 because of: https://github.com/walles/moor/issues/164
+		// Doubled from the smallest size that held up in that test, for
+		// headroom: https://github.com/walles/moor/issues/164
 		events: make(chan Event, 160),
 	}
 
@@ -204,7 +224,7 @@ func NewScreenWithMouseModeAndColorCount(mouseMode MouseMode, terminalColorCount
 
 	go func() {
 		defer func() {
-			panicHandler("NewScreenWithMouseModeAndColorCount()/mainLoop()", recover(), debug.Stack())
+			panicHandler("NewScreen()/mainLoop()", recover(), debug.Stack())
 		}()
 
 		screen.mainLoop()
@@ -240,7 +260,7 @@ func NewScreenWithMouseModeAndColorCount(mouseMode MouseMode, terminalColorCount
 	return &screen, nil
 }
 
-// Close() restores terminal to normal state, must be called after you are done
+// Close restores terminal to normal state, must be called after you are done
 // with the screen returned by NewScreen()
 func (screen *UnixScreen) Close() {
 	// Wait for the terminal background color response to show up and consume

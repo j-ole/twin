@@ -1,7 +1,7 @@
 package twin
 
-// Logger receives twin's own log messages. Implement it and pass it to
-// SetLogger to route those messages wherever you want.
+// Logger receives twin's log messages. Implement it and pass it in
+// Options.Logger to NewScreen to consume those messages.
 type Logger interface {
 	// Debug logs low-level diagnostic messages. This level is recommended for
 	// messages that the user has to explicitly ask to see.
@@ -11,8 +11,8 @@ type Logger interface {
 	// for adding to panic reports.
 	Info(message string)
 
-	// Error logs a problem the user should be told about whether or not they
-	// asked for it.
+	// Error logs a problem the user should be told about whether they asked for
+	// it or not.
 	Error(message string)
 }
 
@@ -25,16 +25,3 @@ func (l *noopLogger) Info(message string) {}
 func (l *noopLogger) Error(message string) {}
 
 var log Logger = &noopLogger{}
-
-// SetLogger routes twin's own log messages to newLogger. Pass nil to disable
-// logging.
-//
-// NOTE: This must be called before any other twin package functions to ensure
-// that log messages are not lost.
-func SetLogger(newLogger Logger) {
-	if newLogger != nil {
-		log = newLogger
-	} else {
-		log = &noopLogger{}
-	}
-}
