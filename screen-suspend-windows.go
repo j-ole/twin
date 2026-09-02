@@ -4,6 +4,6 @@ package twin
 
 import "fmt"
 
-func (screen *UnixScreen) suspend() error {
+func (screen *terminalScreen) suspend() error {
 	return fmt.Errorf("suspend is not supported on windows")
 }

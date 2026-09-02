@@ -27,7 +27,7 @@ func (screen *FakeScreen) Close() {
 }
 
 func (screen *FakeScreen) Clear() {
-	// This method's contents has been copied from UnixScreen.Clear()
+	// This method's contents has been copied from terminalScreen.Clear()
 
 	empty := StyledRune{Rune: ' ', Style: StyleDefault}
 
@@ -40,7 +40,7 @@ func (screen *FakeScreen) Clear() {
 }
 
 func (screen *FakeScreen) SetCell(column int, row int, styledRune StyledRune) int {
-	// This method's contents has been copied from UnixScreen.SetCell()
+	// This method's contents has been copied from terminalScreen.SetCell()
 
 	if column < 0 {
 		return styledRune.Width()
@@ -69,7 +69,7 @@ func (screen *FakeScreen) SetCell(column int, row int, styledRune StyledRune) in
 }
 
 func (screen *FakeScreen) GetCell(column int, row int) StyledRune {
-	// This method's contents has been copied from UnixScreen.GetCell()
+	// This method's contents has been copied from terminalScreen.GetCell()
 
 	if column < 0 {
 		return StyledRune{Rune: ' ', Style: StyleDefault}

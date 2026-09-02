@@ -105,7 +105,7 @@ func (r *interruptableReader) waitForReadReady(timeout time.Duration) (ready boo
 
 // Subscribe to SIGWINCH signals. Compared to polling, this will reduce power
 // usage in the absence of window resizes.
-func (screen *UnixScreen) setupSigwinchNotification() {
+func (screen *terminalScreen) setupSigwinchNotification() {
 	screen.sigwinch = make(chan int, 1)
 	screen.sigwinch <- 0 // Trigger initial screen size query
 
@@ -125,7 +125,7 @@ func (screen *UnixScreen) setupSigwinchNotification() {
 	}()
 }
 
-func (screen *UnixScreen) setupTtyInTtyOut() error {
+func (screen *terminalScreen) setupTtyInTtyOut() error {
 	// Dup stdout so we can close stdin in Close() without closing stdout.
 	// Before this dupping, we crashed on using --quit-if-one-screen.
 	//
@@ -169,6 +169,6 @@ func (screen *UnixScreen) setupTtyInTtyOut() error {
 	return nil
 }
 
-func (screen *UnixScreen) restoreTtyInTtyOut() error {
+func (screen *terminalScreen) restoreTtyInTtyOut() error {
 	return term.Restore(int(screen.ttyIn.Fd()), screen.oldTerminalState)
 }

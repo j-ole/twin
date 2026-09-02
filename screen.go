@@ -15,18 +15,23 @@ import (
 	"golang.org/x/term"
 )
 
+// MouseMode controls how mouse events are captured. See MouseModeAuto,
+// MouseModeSelect and MouseModeScroll for the available behaviors.
 type MouseMode int
 
 const (
+	// MouseModeAuto auto-detects whether to capture mouse events, based on
+	// the terminal.
 	MouseModeAuto MouseMode = iota
 
-	// Don't capture mouse events. This makes selecting with the mouse work. On
-	// some terminals mouse scrolling will work using arrow keys emulation, and
-	// on some not.
+	// MouseModeSelect doesn't capture mouse events. This makes selecting with
+	// the mouse work. On some terminals mouse scrolling will work using arrow
+	// keys emulation, and on some not.
 	MouseModeSelect
 
-	// Capture mouse events. This makes mouse scrolling work. Special gymnastics
-	// will be required for marking with the mouse to copy text.
+	// MouseModeScroll captures mouse events. This makes mouse scrolling work.
+	// Special gymnastics will be required for marking with the mouse to copy
+	// text.
 	MouseModeScroll
 )
 
@@ -48,11 +53,15 @@ type Options struct {
 	Logger Logger
 }
 
+// Screen is the main interface for interacting with the terminal, created
+// with NewScreen.
 type Screen interface {
 	// Close() restores terminal to normal state, must be called after you are
 	// done with your screen
 	Close()
 
+	// Erases all screen cells, replacing them with spaces in the default
+	// style.
 	Clear()
 
 	// Returns the width of the rune just added, in number of columns.
@@ -100,7 +109,10 @@ type Screen interface {
 	// returning the new size instead.
 	Size() (width int, height int)
 
-	// Can be nil if not (yet?) detected
+	// The first call may delay up to 50ms while waiting for the terminal to
+	// respond to a background color query. After that, it's instant.
+	//
+	// Can be nil if not (yet?) detected.
 	TerminalBackground() *Color
 
 	// This channel is what your main loop should be checking.
@@ -108,6 +120,9 @@ type Screen interface {
 
 	// Pause the screen, run the given function, then resume the screen. Blocks
 	// until the function has completed and the screen has been resumed again.
+	//
+	// Error returns mean that either pausing failed or the run function failed.
+	// If resuming fails, this method will panic.
 	PauseAndCall(run func() error) error
 }
 
@@ -117,7 +132,9 @@ type lastRendered struct {
 	cells  [][]StyledRune
 }
 
-type UnixScreen struct {
+// terminalScreen is the real, terminal-backed implementation of Screen,
+// created with NewScreen.
+type terminalScreen struct {
 	widthAccessFromSizeOnly  int // Access from Size() method only
 	heightAccessFromSizeOnly int // Access from Size() method only
 
@@ -201,7 +218,7 @@ func NewScreen(options Options) (Screen, error) {
 		log = &noopLogger{}
 	}
 
-	screen := UnixScreen{
+	screen := terminalScreen{
 		terminalColorCount: terminalColorCount,
 		mouseMode:          options.MouseMode,
 
@@ -262,7 +279,7 @@ func NewScreen(options Options) (Screen, error) {
 
 // Close restores terminal to normal state, must be called after you are done
 // with the screen returned by NewScreen()
-func (screen *UnixScreen) Close() {
+func (screen *terminalScreen) Close() {
 	// Wait for the terminal background color response to show up and consume
 	// it. Without this, if you Close() the screen too close to opening it, that
 	// escape sequence response will be printed as text in the user's terminal
@@ -297,14 +314,14 @@ func (screen *UnixScreen) Close() {
 	}
 }
 
-func (screen *UnixScreen) Events() chan Event {
+func (screen *terminalScreen) Events() chan Event {
 	return screen.events
 }
 
 // Write string to ttyOut, panic on failure, return number of bytes written.
 //
 // You must hold renderLock when calling this method.
-func (screen *UnixScreen) writeLocked(s string) int {
+func (screen *terminalScreen) writeLocked(s string) int {
 	reassertTtyOutMode(screen.ttyOut)
 
 	bytesWritten, err := screen.ttyOut.Write([]byte(s))
@@ -315,7 +332,7 @@ func (screen *UnixScreen) writeLocked(s string) int {
 }
 
 // You must hold renderLock when calling this method.
-func (screen *UnixScreen) setAlternateScreenModeLocked(enable bool) {
+func (screen *terminalScreen) setAlternateScreenModeLocked(enable bool) {
 	// Ref: https://stackoverflow.com/a/11024208/473672
 	if enable {
 		screen.writeLocked("\x1b[?1049h")
@@ -331,7 +348,7 @@ func (screen *UnixScreen) setAlternateScreenModeLocked(enable bool) {
 	}
 }
 
-func (screen *UnixScreen) hideCursorLocked(hide bool) {
+func (screen *terminalScreen) hideCursorLocked(hide bool) {
 	// Ref: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 	if hide {
 		screen.writeLocked("\x1b[?25l")
@@ -343,7 +360,7 @@ func (screen *UnixScreen) hideCursorLocked(hide bool) {
 // Leave the alternate screen for good. Doing both under the same lock keeps a
 // concurrent Show() (the signal handler closes us while the pager goroutine is
 // still running) from putting us back on the alternate screen just as we exit.
-func (screen *UnixScreen) markClosedAndLeaveAlternateScreen() {
+func (screen *terminalScreen) markClosedAndLeaveAlternateScreen() {
 	screen.renderLock.Lock()
 	defer screen.renderLock.Unlock()
 
@@ -362,7 +379,7 @@ func (screen *UnixScreen) markClosedAndLeaveAlternateScreen() {
 // closed or paused.
 //
 // You must hold renderLock when calling this method.
-func (screen *UnixScreen) enterAlternateScreenSessionLocked() {
+func (screen *terminalScreen) enterAlternateScreenSessionLocked() {
 	if screen.alternateScreenActive || screen.closed || screen.paused {
 		return
 	}
@@ -383,7 +400,7 @@ func (screen *UnixScreen) enterAlternateScreenSessionLocked() {
 // teleport the cursor.
 //
 // You must hold renderLock when calling this method.
-func (screen *UnixScreen) leaveAlternateScreenSessionLocked() {
+func (screen *terminalScreen) leaveAlternateScreenSessionLocked() {
 	if !screen.alternateScreenActive {
 		return
 	}
@@ -395,7 +412,7 @@ func (screen *UnixScreen) leaveAlternateScreenSessionLocked() {
 	screen.alternateScreenActive = false
 }
 
-func (screen *UnixScreen) shouldEnableMouseTracking() bool {
+func (screen *terminalScreen) shouldEnableMouseTracking() bool {
 	switch screen.mouseMode {
 	case MouseModeAuto:
 		return !terminalHasArrowKeysEmulation()
@@ -409,7 +426,7 @@ func (screen *UnixScreen) shouldEnableMouseTracking() bool {
 }
 
 // Tell both screen.Size() and the client app that the window was resized
-func (screen *UnixScreen) onWindowResized() {
+func (screen *terminalScreen) onWindowResized() {
 	select {
 	case screen.sigwinch <- 0:
 		// Screen.Size() method notified about resize
@@ -557,7 +574,7 @@ func terminalHasArrowKeysEmulation() bool {
 }
 
 // You must hold renderLock when calling this method.
-func (screen *UnixScreen) enableMouseTrackingLocked(enable bool) {
+func (screen *terminalScreen) enableMouseTrackingLocked(enable bool) {
 	if enable {
 		screen.writeLocked("\x1b[?1006;1000h")
 	} else {
@@ -565,7 +582,7 @@ func (screen *UnixScreen) enableMouseTrackingLocked(enable bool) {
 	}
 }
 
-func (screen *UnixScreen) mainLoop() {
+func (screen *terminalScreen) mainLoop() {
 	// "1400" comes from me trying fling scroll operations on my MacBook
 	// trackpad and looking at the high watermark (logged below).
 	//
@@ -743,12 +760,7 @@ func consumeEncodedEvent(encodedEventSequences string) (*Event, string) {
 	return &event, string(runes[1:])
 }
 
-// Returns screen width and height.
-//
-// NOTE: Never cache this response! On window resizes you'll get an EventResize
-// on the Screen.Events channel, and this method will start returning the new
-// size instead.
-func (screen *UnixScreen) Size() (width int, height int) {
+func (screen *terminalScreen) Size() (width int, height int) {
 	select {
 	case <-screen.sigwinch:
 		// Resize logic needed, see below
@@ -798,12 +810,7 @@ func (screen *UnixScreen) Size() (width int, height int) {
 	return screen.widthAccessFromSizeOnly, screen.heightAccessFromSizeOnly
 }
 
-// The first time you call this, there may be a delay of up to 50ms while we
-// wait for the terminal to respond to our background color query. After that,
-// it will be instant.
-//
-// Returns the terminal background color if known, nil otherwise.
-func (screen *UnixScreen) TerminalBackground() *Color {
+func (screen *terminalScreen) TerminalBackground() *Color {
 	const maxWait = 50 * time.Millisecond
 
 	// Is it already known?
@@ -899,7 +906,7 @@ func parseTerminalBgColorResponse(responseBytes []byte) (*Color, bool) {
 	return &color, true // Valid
 }
 
-func (screen *UnixScreen) SetCell(column int, row int, styledRune StyledRune) int {
+func (screen *terminalScreen) SetCell(column int, row int, styledRune StyledRune) int {
 	if column < 0 {
 		return styledRune.Width()
 	}
@@ -933,7 +940,7 @@ func (screen *UnixScreen) SetCell(column int, row int, styledRune StyledRune) in
 	return runeWidth
 }
 
-func (screen *UnixScreen) GetCell(column int, row int) StyledRune {
+func (screen *terminalScreen) GetCell(column int, row int) StyledRune {
 	if column < 0 {
 		return StyledRune{Rune: ' ', Style: StyleDefault}
 	}
@@ -952,7 +959,7 @@ func (screen *UnixScreen) GetCell(column int, row int) StyledRune {
 	return screen.cells[row][column]
 }
 
-func (screen *UnixScreen) Clear() {
+func (screen *terminalScreen) Clear() {
 	empty := StyledRune{Rune: ' ', Style: StyleDefault}
 
 	width, height := screen.Size()
@@ -1066,14 +1073,14 @@ func renderLine(row []StyledRune, width int, terminalColorCount ColorCount) (str
 	return builder.String(), len(row)
 }
 
-func (screen *UnixScreen) Show() {
+func (screen *terminalScreen) Show() {
 	width, height := screen.Size()
 
 	const fullScreen = true
 	screen.showNLines(width, height, fullScreen)
 }
 
-func (screen *UnixScreen) ShowNLines(height int) {
+func (screen *terminalScreen) ShowNLines(height int) {
 	width, _ := screen.Size()
 
 	const fullScreen = false
@@ -1084,7 +1091,7 @@ func (screen *UnixScreen) ShowNLines(height int) {
 // decide whether to do a full render or a delta render.
 //
 // You must hold renderLock when calling this method.
-func (screen *UnixScreen) snapshotLastRenderedLocked() {
+func (screen *terminalScreen) snapshotLastRenderedLocked() {
 	height := len(screen.cells)
 	width := 0
 	if height > 0 {
@@ -1124,7 +1131,7 @@ func (screen *UnixScreen) snapshotLastRenderedLocked() {
 // Map updated lines
 //
 // You must hold renderLock when calling this method.
-func (screen *UnixScreen) findUpdatedLinesLocked() map[int][]StyledRune {
+func (screen *terminalScreen) findUpdatedLinesLocked() map[int][]StyledRune {
 	height := len(screen.cells)
 	updatedLines := make(map[int][]StyledRune, height)
 	for row := range height {
@@ -1171,7 +1178,7 @@ func renderWithNewline(builder *strings.Builder, line []StyledRune, width int, t
 // You must hold renderLock when calling this method.
 //
 // Returns true if delta rendering was done, false if a full render is needed.
-func (screen *UnixScreen) showNLinesDeltaLocked(width int, height int) bool {
+func (screen *terminalScreen) showNLinesDeltaLocked(width int, height int) bool {
 	if screen.lastRendered.width != width || screen.lastRendered.height != height {
 		return false
 	}
@@ -1218,7 +1225,7 @@ func (screen *UnixScreen) showNLinesDeltaLocked(width int, height int) bool {
 // Without fullScreen we print height lines wherever the cursor happens to be,
 // like any other command line tool would. This is how ReprintAfterExit() leaves
 // moor's output behind on the user's own screen.
-func (screen *UnixScreen) showNLines(width int, height int, fullScreen bool) {
+func (screen *terminalScreen) showNLines(width int, height int, fullScreen bool) {
 	screen.renderLock.Lock()
 	defer screen.renderLock.Unlock()
 
@@ -1265,12 +1272,7 @@ func (screen *UnixScreen) showNLines(width int, height int, fullScreen bool) {
 	screen.snapshotLastRenderedLocked()
 }
 
-// Pause the screen, run the given function, then resume the screen. Blocks
-// until the function has completed and the screen has been resumed again.
-//
-// Error returns mean that either pausing failed or the run function failed. If
-// resuming fails, this method will panic.
-func (screen *UnixScreen) PauseAndCall(run func() error) error {
+func (screen *terminalScreen) PauseAndCall(run func() error) error {
 	screen.ttyInReader.SetPaused(true)
 	defer screen.ttyInReader.SetPaused(false)
 
@@ -1324,7 +1326,7 @@ func (screen *UnixScreen) PauseAndCall(run func() error) error {
 	return nil
 }
 
-func (screen *UnixScreen) restoreRawModeAfterResume() error {
+func (screen *terminalScreen) restoreRawModeAfterResume() error {
 	terminalState, err := term.MakeRaw(int(screen.ttyIn.Fd()))
 	if err != nil {
 		return fmt.Errorf("failed to re-enter raw mode after suspend: %w", err)

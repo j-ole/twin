@@ -166,7 +166,7 @@ func (r *interruptableReader) waitForReadReady(timeout time.Duration) (ready boo
 
 // Poll for terminal size changes. No SIGWINCH on Windows, this is apparently
 // the way.
-func (screen *UnixScreen) setupSigwinchNotification() {
+func (screen *terminalScreen) setupSigwinchNotification() {
 	screen.sigwinch = make(chan int, 1)
 	screen.sigwinch <- 0 // Trigger initial screen size query
 
@@ -197,7 +197,7 @@ func (screen *UnixScreen) setupSigwinchNotification() {
 	}()
 }
 
-func (screen *UnixScreen) setupTtyInTtyOut() error {
+func (screen *terminalScreen) setupTtyInTtyOut() error {
 	in, err := syscall.Open("CONIN$", syscall.O_RDWR, 0)
 	if err != nil {
 		return fmt.Errorf("failed to open CONIN$: %w", err)
@@ -246,7 +246,7 @@ func (screen *UnixScreen) setupTtyInTtyOut() error {
 	return nil
 }
 
-func (screen *UnixScreen) restoreTtyInTtyOut() error {
+func (screen *terminalScreen) restoreTtyInTtyOut() error {
 	errors := []error{}
 
 	stdin := windows.Handle(screen.ttyIn.Fd())

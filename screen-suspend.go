@@ -12,7 +12,7 @@ import (
 // Suspend and wait for SIGCONT, then resume. Basically ctrl-Z handling.
 //
 // So this method will not return until after the process is resumed again.
-func (screen *UnixScreen) suspend() error {
+func (screen *terminalScreen) suspend() error {
 	cont := make(chan os.Signal, 1)
 	signal.Notify(cont, syscall.SIGCONT)
 	defer signal.Stop(cont)

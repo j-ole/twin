@@ -49,7 +49,7 @@ type Progress struct {
 // ProgressStateIndeterminate, and clamped to 0-100 otherwise.
 //
 // Panics if state is not one of the ProgressState* constants.
-func (screen *UnixScreen) SetProgress(state ProgressState, percent int) {
+func (screen *terminalScreen) SetProgress(state ProgressState, percent int) {
 	if state < ProgressStateRemove || state > ProgressStatePause {
 		panic(fmt.Errorf("invalid progress state: %d", state))
 	}
@@ -71,7 +71,7 @@ func (screen *UnixScreen) SetProgress(state ProgressState, percent int) {
 }
 
 // You must hold renderLock when calling this method.
-func (screen *UnixScreen) renderProgressLocked() string {
+func (screen *terminalScreen) renderProgressLocked() string {
 	osc := "\x1b]9;4;"
 	osc += strconv.Itoa(int(screen.progress.State))
 
