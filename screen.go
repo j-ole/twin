@@ -56,8 +56,8 @@ type Options struct {
 // Screen is the main interface for interacting with the terminal, created
 // with NewScreen.
 type Screen interface {
-	// Close() restores terminal to normal state, must be called after you are
-	// done with your screen
+	// Close restores the terminal to normal state, must be called after you are
+	// done with the screen returned by NewScreen().
 	Close()
 
 	// Erases all screen cells, replacing them with spaces in the default
@@ -277,8 +277,6 @@ func NewScreen(options Options) (Screen, error) {
 	return &screen, nil
 }
 
-// Close restores terminal to normal state, must be called after you are done
-// with the screen returned by NewScreen()
 func (screen *terminalScreen) Close() {
 	// Wait for the terminal background color response to show up and consume
 	// it. Without this, if you Close() the screen too close to opening it, that
