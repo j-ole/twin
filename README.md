@@ -19,8 +19,12 @@ Twin opens an alternate screen buffer that it draws into.
 
 # TODO
 
-- Enable revive's "exported" rule and validate comments for our public surface
+- Should we reshuffle the repo into an internal/ directory and one place for the
+  public API?
+- Get CI running for PRs and pushes to main
+- Review the API based on how it is being used
 
 ## Done
 
 - Make Color implement stdlib's color.Color
+- Enable revive's "exported" rule and validate comments for our public surface
