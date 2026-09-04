@@ -1,3 +1,6 @@
+[![Linux CI](https://github.com/walles/twin/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/walles/twin/actions/workflows/linux-ci.yml)
+[![Windows CI](https://github.com/walles/twin/actions/workflows/windows-ci.yml/badge.svg)](https://github.com/walles/twin/actions/workflows/windows-ci.yml)
+
 Twin is a library for drawing to the terminal screen.
 
 # Installation
@@ -19,12 +22,13 @@ Twin opens an alternate screen buffer that it draws into.
 
 # TODO
 
-- Should we reshuffle the repo into an internal/ directory and one place for the
-  public API?
-- Get CI running for PRs and pushes to main
+- Should we reshuffle the repo into an `internal/` directory and one place for
+  the public API?
 - Review the API based on how it is being used
 
 ## Done
 
 - Make Color implement stdlib's color.Color
 - Enable revive's "exported" rule and validate comments for our public surface
+- Get CI running for PRs and pushes to main, and add a CI status badge at the
+  top of the README.
