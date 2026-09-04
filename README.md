@@ -3,6 +3,15 @@
 
 Twin is a library for drawing to the terminal screen.
 
+Write once, run anywhere your terminal does: Twin is tested on Linux, macOS and
+Windows.
+
+# Demo
+
+[ftop](https://github.com/walles/ftop) is built using twin:
+
+![ftop screenshot](screenshot.png)
+
 # Installation
 
 ```
@@ -28,11 +37,9 @@ Twin opens an alternate screen buffer that it draws into.
 
 # TODO
 
-- Once [ftop](https://github.com/walles/ftop) has been migrated to use this
-  twin, add an `ftop` screenshot
-
 ## Done
 
+- Add an `ftop` screenshot demonstrating what twin can do
 - Make Color implement stdlib's color.Color
 - Enable revive's "exported" rule and validate comments for our public surface
 - Get CI running for PRs and pushes to main, and add a CI status badge at the
