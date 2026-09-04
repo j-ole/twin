@@ -29,21 +29,16 @@ const (
 
 // Map incoming escape keystrokes to keycodes, used in consumeEncodedEvent() in
 // screen.go.
-//
-// NOTE: If you put a single ESC character in here ('\x1b') it will be consumed
-// by itself rather than as part of the sequence it belongs to, and parsing of
-// all special sequences starting with ESC will break down.
-//
-// FIXME: Write a test preventing that from happening.
 var escapeSequenceToKeyCode = map[string]KeyCode{
 	// NOTE: Please keep this list in the same order as the KeyCode const()
 	// section above.
 
-	// KeyEscape intentionally left out because it's too short, see comment
-	// above.
+	// KeyEscape intentionally left out: it's a single-byte prefix of every
+	// other entry here, so consumeEncodedEvent() handles it separately,
+	// after this map fails to match.
 
-	// KeyEnter intentionally left out because it's too short, see comment
-	// above.
+	// KeyEnter intentionally left out: consumeEncodedEvent() handles '\r'
+	// separately, after this map fails to match.
 
 	"\x7f":    KeyBackspace,
 	"\x1b[3~": KeyDelete,
