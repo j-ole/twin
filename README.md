@@ -22,7 +22,6 @@ Twin opens an alternate screen buffer that it draws into.
 
 # TODO
 
-- Review the API based on how it is being used
 - Once [ftop](https://github.com/walles/ftop) has been migrated to use this
   twin, add an `ftop` screenshot
 
@@ -32,3 +31,4 @@ Twin opens an alternate screen buffer that it draws into.
 - Enable revive's "exported" rule and validate comments for our public surface
 - Get CI running for PRs and pushes to main, and add a CI status badge at the
   top of the README.
+- Review the API based on how it is being used
