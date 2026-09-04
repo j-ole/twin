@@ -20,6 +20,12 @@ go get github.com/walles/twin
 
 Twin opens an alternate screen buffer that it draws into.
 
+# Making a new release
+
+1. `git tag --annotate vX.Y.Z`, note the leading `v` in the version number.
+   Write something descriptive in the annotation message.
+1. `git push --tags`
+
 # TODO
 
 - Once [ftop](https://github.com/walles/ftop) has been migrated to use this
