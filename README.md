@@ -1,14 +1,15 @@
 [![Linux CI](https://github.com/walles/twin/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/walles/twin/actions/workflows/linux-ci.yml)
 [![Windows CI](https://github.com/walles/twin/actions/workflows/windows-ci.yml/badge.svg)](https://github.com/walles/twin/actions/workflows/windows-ci.yml)
 
-Twin is a library for drawing to the terminal screen.
-
-Write once, run anywhere your terminal does: Twin is tested on Linux, macOS and
-Windows.
+Twin is a library for drawing to the terminal screen, originally built for the
+[moor](https://github.com/walles/moor) pager and battle-tested across Linux,
+macOS and Windows ever since.
 
 # Demo
 
-[ftop](https://github.com/walles/ftop) is built using twin:
+The [moor](https://github.com/walles/moor) pager was built using twin.
+
+So is [ftop](https://github.com/walles/ftop):
 
 ![ftop screenshot](screenshot.png)
 
