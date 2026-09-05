@@ -1,5 +1,8 @@
 module github.com/walles/twin
 
+// Bumping this might let us delete the unicodePost15PrintableRanges hack in
+// styledRune.go, once the minimum Go version's unicode.Version has caught up
+// with the Unicode blocks listed there.
 go 1.23.0
 
 require (

@@ -11,68 +11,41 @@ func TestRuneWidth(t *testing.T) {
 	assert.Equal(t, StyledRune{Rune: '午', Style: Style{}}.Width(), 2)
 }
 
-// Go's unicode tables lag behind the latest Unicode release, so
-// unicode.IsPrint() does not recognize blocks added in Unicode 15.1 (2023),
-// 16.0 (2024), and 17.0 (2025). Printable() should still consider characters
-// in these blocks printable.
+// Added after a moor user reported that recently-added Unicode characters
+// (in their case, Legacy Computing Supplement glyphs used by jj) were
+// rendering as '?'.
+//
+// This checks the boundaries of our own unicodePost15PrintableRanges table,
+// not "the last real character Unicode has assigned in this block" — that
+// shifts with every Unicode release. The boundaries below are true by
+// construction, independent of whichever Unicode version the running Go
+// toolchain knows about.
 //
 // Ported from https://github.com/walles/moor/pull/408.
 func TestPrintableUnicodePost15(t *testing.T) {
-	cases := []struct {
-		name string
-		r    rune
-	}{
-		// Unicode 15.1 (2023)
-		{"CJK Ext I start", 0x2EBF0},
-		{"CJK Ext I end", 0x2EE5F},
-
-		// Unicode 16.0 (2024)
-		{"Todhri start", 0x105C0},
-		{"Todhri end", 0x105F3},
-		{"Garay start", 0x10D40},
-		{"Garay end", 0x10D8E},
-		{"Tulu-Tigalari start", 0x11380},
-		{"Tulu-Tigalari end", 0x113D5},
-		{"Myanmar Extended-C start", 0x116D0},
-		{"Myanmar Extended-C end", 0x116FF},
-		{"Sunuwar start", 0x11BC0},
-		{"Sunuwar end", 0x11BF2},
-		{"Egyptian Hieroglyphs Ext-A start", 0x13460},
-		{"Egyptian Hieroglyphs Ext-A end", 0x143FA},
-		{"Gurung Khema start", 0x16100},
-		{"Gurung Khema end", 0x16139},
-		{"Kirat Rai start", 0x16D40},
-		{"Kirat Rai end", 0x16D79},
-		{"Legacy Computing Supplement start", 0x1CC00},
-		{"Large Type Piece (used by jj)", 0x1CE1A},
-		{"Large Type Piece end", 0x1CE50},
-		{"Legacy Computing Supplement end", 0x1CEBF},
-		{"Ol Onal start", 0x1E5D0},
-		{"Ol Onal end", 0x1E5FA},
-
-		// Unicode 17.0 (2025)
-		{"Sidetic start", 0x10940},
-		{"Sidetic end", 0x1095F},
-		{"Sharada Supplement start", 0x11B60},
-		{"Sharada Supplement end", 0x11B7F},
-		{"Tolong Siki start", 0x11DB0},
-		{"Tolong Siki end", 0x11DEF},
-		{"Chisoi start", 0x16D80},
-		{"Chisoi end", 0x16DAF},
-		{"Beria Erfe start", 0x16EA0},
-		{"Beria Erfe end", 0x16EDF},
-		{"Tangut Components Supplement start", 0x18D80},
-		{"Tangut Components Supplement end", 0x18DFF},
-		{"Misc Symbols Supplement start", 0x1CEC0},
-		{"Misc Symbols Supplement end", 0x1CEFF},
-		{"Tai Yo start", 0x1E6C0},
-		{"Tai Yo end", 0x1E6FF},
-		{"CJK Ext J start", 0x323B0},
-		{"CJK Ext J end", 0x3347F},
+	for _, r := range unicodePost15PrintableRanges {
+		assert.Assert(t, Printable(r.lo), "expected U+%04X (range start) to be printable", r.lo)
+		assert.Assert(t, Printable(r.hi), "expected U+%04X (range end) to be printable", r.hi)
 	}
 
-	for _, tc := range cases {
-		assert.Assert(t, Printable(tc.r),
-			"expected U+%04X (%s) to be printable", tc.r, tc.name)
+	// jj's motivating use case: Large Type Piece glyphs from the Symbols for
+	// Legacy Computing Supplement block (Unicode 16.0), known to be assigned
+	// real characters.
+	assert.Assert(t, Printable(0x1CE1A), "expected Large Type Piece U+1CE1A to be printable")
+}
+
+// Printable()'s binary search over unicodePost15PrintableRanges assumes the
+// table is sorted by `lo` with no overlaps. Guard that invariant, since a
+// violation would make the binary search silently miss some runes rather than
+// fail loudly.
+func TestUnicodePost15PrintableRangesSorted(t *testing.T) {
+	prevHi := rune(-1)
+	for _, r := range unicodePost15PrintableRanges {
+		assert.Assert(t, r.lo > prevHi,
+			"range %X..%X overlaps or is out of order with previous (hi=%X)",
+			r.lo, r.hi, prevHi)
+		assert.Assert(t, r.lo <= r.hi,
+			"range %X..%X has lo > hi", r.lo, r.hi)
+		prevHi = r.hi
 	}
 }
