@@ -1,3 +1,4 @@
+[![Docs](https://img.shields.io/badge/hello-Godoc-blue.svg?label&logo=go)](https://pkg.go.dev/github.com/walles/twin#section-documentation)
 [![Linux CI](https://github.com/walles/twin/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/walles/twin/actions/workflows/linux-ci.yml)
 [![Windows CI](https://github.com/walles/twin/actions/workflows/windows-ci.yml/badge.svg)](https://github.com/walles/twin/actions/workflows/windows-ci.yml)
 
@@ -29,6 +30,9 @@ go get github.com/walles/twin
 * Close the screen when done using `screen.Close()`
 
 Twin opens an alternate screen buffer that it draws into.
+
+See the full API docs at
+[pkg.go.dev/github.com/walles/twin](https://pkg.go.dev/github.com/walles/twin#section-documentation).
 
 # Making a new release
 
