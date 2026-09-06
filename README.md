@@ -148,6 +148,29 @@ Twin opens an alternate screen buffer that it draws into.
 See the full API docs at
 [pkg.go.dev/github.com/walles/twin](https://pkg.go.dev/github.com/walles/twin#section-documentation).
 
+# Why not tcell?
+
+Twin's API is similar to [tcell](https://github.com/gdamore/tcell)'s because
+twin started out as a from-scratch reimplementation of tcell for
+[moor](https://github.com/walles/moor).
+
+But the real case for twin isn't a longer feature list than tcell's, it's years
+of continuous, real-world use.
+
+The trigger in 2021 was tcell's `PollEvent()`: it hands you one event at a time
+and blocks until the next one arrives, so moor had to redraw after every single
+event. On a trackpad fling-scroll that meant redrawing once per queued scroll
+tick, long after the user's finger had left the trackpad. Twin's `Events()` is a
+plain channel instead, so moor could drain everything queued up and redraw once,
+and [scrolling immediately felt
+right](https://github.com/walles/moor/commit/60da229caba15f270aa7d031504565b0b9a19667).
+
+Tcell later shipped its own answer to this:
+[`ChannelEvents()`](https://pkg.go.dev/github.com/gdamore/tcell/v2#Screen.ChannelEvents),
+so today either library can drain events non-blockingly before redrawing. But by
+then twin was already built, and it's been running moor — and later
+[ftop](https://github.com/walles/ftop) — in production ever since.
+
 # Making a new release
 
 1. `git tag --annotate vX.Y.Z`, note the leading `v` in the version number.
