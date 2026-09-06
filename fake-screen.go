@@ -16,13 +16,14 @@ type FakeScreen struct {
 	cells  [][]StyledRune
 }
 
-// NewFakeScreen creates a FakeScreen of the given size. Initial contents is
-// undefined.
+// NewFakeScreen creates a FakeScreen of the given size, with all cells set to
+// a space in the default style.
 func NewFakeScreen(width int, height int) *FakeScreen {
 	rows := make([][]StyledRune, height)
 	for i := range height {
 		rows[i] = make([]StyledRune, width)
 	}
+	clearCells(rows)
 
 	return &FakeScreen{
 		width:  width,
@@ -38,16 +39,7 @@ func (screen *FakeScreen) Close() {
 // Clear erases all screen cells, replacing them with spaces in the default
 // style.
 func (screen *FakeScreen) Clear() {
-	// This method's contents has been copied from terminalScreen.Clear()
-
-	empty := StyledRune{Rune: ' ', Style: StyleDefault}
-
-	width, height := screen.Size()
-	for row := range height {
-		for column := range width {
-			screen.cells[row][column] = empty
-		}
-	}
+	clearCells(screen.cells)
 }
 
 // SetCell returns the width of the rune just added, in number of columns.

@@ -800,6 +800,7 @@ func (screen *terminalScreen) Size() (width int, height int) {
 	for rowNumber := range height {
 		newCells[rowNumber] = make([]StyledRune, width)
 	}
+	clearCells(newCells)
 
 	screen.widthAccessFromSizeOnly = width
 	screen.heightAccessFromSizeOnly = height
@@ -958,12 +959,17 @@ func (screen *terminalScreen) GetCell(column int, row int) StyledRune {
 }
 
 func (screen *terminalScreen) Clear() {
+	screen.Size() // Trigger a pending resize, if any, before clearing
+	clearCells(screen.cells)
+}
+
+// clearCells fills cells with spaces in the default style.
+func clearCells(cells [][]StyledRune) {
 	empty := StyledRune{Rune: ' ', Style: StyleDefault}
 
-	width, height := screen.Size()
-	for row := range height {
-		for column := range width {
-			screen.cells[row][column] = empty
+	for _, row := range cells {
+		for column := range row {
+			row[column] = empty
 		}
 	}
 }
