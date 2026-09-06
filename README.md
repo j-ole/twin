@@ -9,21 +9,26 @@ Linux, macOS and Windows ever since.
 
 # Features
 
-* **Clickable hyperlinks** in terminals that support them
-* **Automatic color downsampling**, so full 24-bit color degrades gracefully
-  on terminals that don't support truecolor
-* **Self-healing raw mode**: detects when another program resets your
-  terminal settings behind your back and restores them
-* **Transparent suspend/resume**: Ctrl-Z drops you to the shell and back
-  cleanly
-* **Efficient rendering** that only redraws what changed on screen, not the
-  whole frame every time
-* **Wide-character support**, so CJK and other double-width characters render
-  without corrupting the layout
-* **Native progress indicators**, reporting task progress to the terminal /
-  taskbar, including error and indeterminate states
-* **Terminal background color detection**, so your program can adapt to it if
-  needed
+* [Clickable hyperlinks](https://pkg.go.dev/github.com/walles/twin#Style.WithHyperlink)
+  in terminals that support them
+* [Automatic color downsampling](https://github.com/walles/twin/blob/a19a4ca4960118d8a93f57cd865933a76b41e08c/colors.go#L235-L284),
+  so full 24-bit color degrades gracefully on terminals that don't support
+  truecolor
+* [Self-healing raw mode](https://github.com/walles/twin/blob/a19a4ca4960118d8a93f57cd865933a76b41e08c/screen-setup.go#L18-L51):
+  detects when another program resets your terminal settings behind your back
+  and restores them
+* [Transparent suspend/resume](https://github.com/walles/twin/blob/a19a4ca4960118d8a93f57cd865933a76b41e08c/screen-suspend.go#L12-L32):
+  Ctrl-Z drops you to the shell and back cleanly
+* [Efficient rendering](https://github.com/walles/twin/blob/a19a4ca4960118d8a93f57cd865933a76b41e08c/screen.go#L1129-L1212)
+  that only redraws what changed on screen, not the whole frame every time
+* [Wide-character support](https://pkg.go.dev/github.com/walles/twin#StyledRune.Width),
+  so CJK and other double-width characters render without corrupting the
+  layout
+* [Native progress indicators](https://pkg.go.dev/github.com/walles/twin#Screen.SetProgress),
+  reporting task progress to the terminal / taskbar, including error and
+  indeterminate states
+* [Terminal background color detection](https://pkg.go.dev/github.com/walles/twin#Screen.TerminalBackground),
+  so your program can adapt to it if needed
 
 # Demo
 
