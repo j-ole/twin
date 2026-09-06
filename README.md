@@ -6,6 +6,24 @@ Twin is a library for drawing to the terminal screen, originally built for the
 [moor](https://github.com/walles/moor) pager and battle-tested across Linux,
 macOS and Windows ever since.
 
+# Features
+
+* **Clickable hyperlinks** in terminals that support them
+* **Automatic color downsampling**, so full 24-bit color degrades gracefully
+  on terminals that don't support truecolor
+* **Self-healing raw mode**: detects when another program resets your
+  terminal settings behind your back and restores them
+* **Transparent suspend/resume**: Ctrl-Z drops you to the shell and back
+  cleanly
+* **Efficient rendering** that only redraws what changed on screen, not the
+  whole frame every time
+* **Wide-character support**, so CJK and other double-width characters render
+  without corrupting the layout
+* **Native progress indicators**, reporting task progress to the terminal /
+  taskbar, including error and indeterminate states
+* **Terminal background color detection**, so your program can adapt to it if
+  needed
+
 # Demo
 
 The [moor](https://github.com/walles/moor) pager was built using twin.
