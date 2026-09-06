@@ -62,6 +62,9 @@ type Screen interface {
 
 	// Erases all screen cells, replacing them with spaces in the default
 	// style.
+	//
+	// Like Size(), may apply a pending resize; see Size() for how that
+	// affects the rest of the frame.
 	Clear()
 
 	// Returns the width of the rune just added, in number of columns.
@@ -105,8 +108,10 @@ type Screen interface {
 	// Returns screen width and height.
 	//
 	// NOTE: Never cache this response! On window resizes you'll get an
-	// EventResize on the Screen.Events channel, and this method will start
-	// returning the new size instead.
+	// EventResize on the Screen.Events channel. The new size takes effect the
+	// next time you call Size() or Clear(), whichever comes first after your
+	// last Show()/ShowNLines() call, and stays consistent for the rest of that
+	// frame.
 	Size() (width int, height int)
 
 	// The first call may delay up to 50ms while waiting for the terminal to
@@ -135,8 +140,18 @@ type lastRendered struct {
 // terminalScreen is the real, terminal-backed implementation of Screen,
 // created with NewScreen.
 type terminalScreen struct {
-	widthAccessFromSizeOnly  int // Access from Size() method only
-	heightAccessFromSizeOnly int // Access from Size() method only
+	// Access only through freezeSizeForFrame()/applyPendingResize()
+	widthAccessFromSizeOnly  int
+	heightAccessFromSizeOnly int
+
+	// Set by freezeSizeForFrame() once it's applied this frame's pending resize
+	// (if any), cleared once Show()/ShowNLines() is done rendering. Not guarded
+	// by renderLock, see freezeSizeForFrame().
+	inFrame bool
+
+	// Queries the current terminal size. Defaults to term.GetSize, overridden
+	// in tests so resize handling can be exercised without a real terminal.
+	getSize func(fd int) (width int, height int, err error)
 
 	// Protects both screen writes (through the ttyOut field) and lastRendered
 	// updates
@@ -221,6 +236,7 @@ func NewScreen(options Options) (Screen, error) {
 	screen := terminalScreen{
 		terminalColorCount: terminalColorCount,
 		mouseMode:          options.MouseMode,
+		getSize:            term.GetSize,
 
 		// Sized from manual testing on my MacBook: start
 		// "./moor.sh sample-files/large-git-log-patch.txt", then do a two
@@ -759,21 +775,52 @@ func consumeEncodedEvent(encodedEventSequences string) (*Event, string) {
 }
 
 func (screen *terminalScreen) Size() (width int, height int) {
+	screen.freezeSizeForFrame()
+
+	if screen.widthAccessFromSizeOnly == 0 || screen.heightAccessFromSizeOnly == 0 {
+		panic(fmt.Sprintf("No screen size available, this is a bug: %d x %d",
+			screen.widthAccessFromSizeOnly,
+			screen.heightAccessFromSizeOnly))
+	}
+	return screen.widthAccessFromSizeOnly, screen.heightAccessFromSizeOnly
+}
+
+// freezeSizeForFrame is the single gate a pending resize goes through: the
+// first call after the previous frame's Show()/ShowNLines() completed applies
+// the resize and locks in screen.inFrame; every call after that within the same
+// frame sees the same dimensions instead. This is what keeps a frame internally
+// consistent instead of tearing between two different sizes mid rendering.
+//
+// screen.inFrame is intentionally not guarded by renderLock: it's only ever
+// touched by whichever single goroutine drives the screen (calls Size(),
+// Clear(), Show()...), same as screen.cells itself. The SIGWINCH-handling
+// goroutine (see onWindowResized()) never touches either.
+func (screen *terminalScreen) freezeSizeForFrame() {
+	if screen.inFrame {
+		return
+	}
+
+	screen.applyPendingResize()
+	screen.inFrame = true
+}
+
+// applyPendingResize applies a terminal resize detected since the last call (if
+// any), reallocating screen.cells to the new dimensions.
+//
+// Only call this through freezeSizeForFrame(): calling it directly while
+// screen.inFrame is true would swap out the cell buffer mid-frame, while some
+// of the frame's content has already been drawn and some hasn't, tearing that
+// frame's next Show().
+func (screen *terminalScreen) applyPendingResize() {
 	select {
 	case <-screen.sigwinch:
 		// Resize logic needed, see below
 	default:
-		// No resize, go with the existing values
-		if screen.widthAccessFromSizeOnly == 0 || screen.heightAccessFromSizeOnly == 0 {
-			panic(fmt.Sprintf("No screen size available, this is a bug: %d x %d",
-				screen.widthAccessFromSizeOnly,
-				screen.heightAccessFromSizeOnly))
-		}
-		return screen.widthAccessFromSizeOnly, screen.heightAccessFromSizeOnly
+		return // No resize pending
 	}
 
 	// Window was resized
-	width, height, err := term.GetSize(int(screen.ttyOut.Fd()))
+	width, height, err := screen.getSize(int(screen.ttyOut.Fd()))
 	if err != nil {
 		panic(err)
 	}
@@ -785,7 +832,7 @@ func (screen *terminalScreen) Size() (width int, height int) {
 	if screen.widthAccessFromSizeOnly == width && screen.heightAccessFromSizeOnly == height {
 		// Not sure when this would happen, but if it does this wasn't really a
 		// resize, and we don't need to treat it as such.
-		return screen.widthAccessFromSizeOnly, screen.heightAccessFromSizeOnly
+		return
 	}
 
 	oldHeight := screen.heightAccessFromSizeOnly
@@ -805,8 +852,6 @@ func (screen *terminalScreen) Size() (width int, height int) {
 	screen.widthAccessFromSizeOnly = width
 	screen.heightAccessFromSizeOnly = height
 	screen.cells = newCells
-
-	return screen.widthAccessFromSizeOnly, screen.heightAccessFromSizeOnly
 }
 
 func (screen *terminalScreen) TerminalBackground() *Color {
@@ -959,7 +1004,10 @@ func (screen *terminalScreen) GetCell(column int, row int) StyledRune {
 }
 
 func (screen *terminalScreen) Clear() {
-	screen.Size() // Trigger a pending resize, if any, before clearing
+	// See freezeSizeForFrame(): this only actually applies a pending resize if
+	// nothing else already did earlier in this frame.
+	screen.freezeSizeForFrame()
+
 	clearCells(screen.cells)
 }
 
@@ -1232,6 +1280,9 @@ func (screen *terminalScreen) showNLinesDeltaLocked(width int, height int) bool 
 func (screen *terminalScreen) showNLines(width int, height int, fullScreen bool) {
 	screen.renderLock.Lock()
 	defer screen.renderLock.Unlock()
+
+	// The frame ends here, see freezeSizeForFrame().
+	defer func() { screen.inFrame = false }()
 
 	if fullScreen {
 		// Note that entering drops the render cache, so the delta check below
