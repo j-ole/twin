@@ -138,6 +138,10 @@ type terminalScreen struct {
 	widthAccessFromSizeOnly  int // Access from Size() method only
 	heightAccessFromSizeOnly int // Access from Size() method only
 
+	// Queries the current terminal size. Defaults to term.GetSize, overridden
+	// in tests so resize handling can be exercised without a real terminal.
+	getSize func(fd int) (width int, height int, err error)
+
 	// Protects both screen writes (through the ttyOut field) and lastRendered
 	// updates
 	renderLock sync.Mutex
@@ -221,6 +225,7 @@ func NewScreen(options Options) (Screen, error) {
 	screen := terminalScreen{
 		terminalColorCount: terminalColorCount,
 		mouseMode:          options.MouseMode,
+		getSize:            term.GetSize,
 
 		// Sized from manual testing on my MacBook: start
 		// "./moor.sh sample-files/large-git-log-patch.txt", then do a two
@@ -773,7 +778,7 @@ func (screen *terminalScreen) Size() (width int, height int) {
 	}
 
 	// Window was resized
-	width, height, err := term.GetSize(int(screen.ttyOut.Fd()))
+	width, height, err := screen.getSize(int(screen.ttyOut.Fd()))
 	if err != nil {
 		panic(err)
 	}
