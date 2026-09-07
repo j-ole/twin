@@ -103,14 +103,14 @@ type Screen interface {
 	//
 	// Unlike Show(), this one never takes over the terminal; it prints where
 	// the cursor already is.
-	ShowNLines(lineCountToShow int)
+	PrintLines(lineCountToShow int)
 
 	// Returns screen width and height.
 	//
 	// NOTE: Never cache this response! On window resizes you'll get an
 	// EventResize on the Screen.Events channel. The new size takes effect the
 	// next time you call Size() or Clear(), whichever comes first after your
-	// last Show()/ShowNLines() call, and stays consistent for the rest of that
+	// last Show()/PrintLines() call, and stays consistent for the rest of that
 	// frame.
 	Size() (width int, height int)
 
@@ -145,7 +145,7 @@ type terminalScreen struct {
 	heightAccessFromSizeOnly int
 
 	// Set by freezeSizeForFrame() once it's applied this frame's pending resize
-	// (if any), cleared once Show()/ShowNLines() is done rendering. Not guarded
+	// (if any), cleared once Show()/PrintLines() is done rendering. Not guarded
 	// by renderLock, see freezeSizeForFrame().
 	inFrame bool
 
@@ -381,7 +381,7 @@ func (screen *terminalScreen) markClosedAndLeaveAlternateScreen() {
 	screen.closed = true
 	screen.leaveAlternateScreenSessionLocked()
 
-	// Reset progress state so that calling ShowNLines() after Close() won't
+	// Reset progress state so that calling PrintLines() after Close() won't
 	// leave a progress bar on the screen.
 	screen.progress = Progress{}
 
@@ -786,7 +786,7 @@ func (screen *terminalScreen) Size() (width int, height int) {
 }
 
 // freezeSizeForFrame is the single gate a pending resize goes through: the
-// first call after the previous frame's Show()/ShowNLines() completed applies
+// first call after the previous frame's Show()/PrintLines() completed applies
 // the resize and locks in screen.inFrame; every call after that within the same
 // frame sees the same dimensions instead. This is what keeps a frame internally
 // consistent instead of tearing between two different sizes mid rendering.
@@ -1132,7 +1132,7 @@ func (screen *terminalScreen) Show() {
 	screen.showNLines(width, height, fullScreen)
 }
 
-func (screen *terminalScreen) ShowNLines(height int) {
+func (screen *terminalScreen) PrintLines(height int) {
 	width, _ := screen.Size()
 
 	const fullScreen = false

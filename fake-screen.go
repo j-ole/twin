@@ -113,9 +113,9 @@ func (screen *FakeScreen) SetProgress(state ProgressState, percent int) {
 func (screen *FakeScreen) Show() {
 }
 
-// ShowNLines does nothing, since a FakeScreen has no real terminal to render
+// PrintLines does nothing, since a FakeScreen has no real terminal to render
 // into.
-func (screen *FakeScreen) ShowNLines(int) {
+func (screen *FakeScreen) PrintLines(int) {
 }
 
 // Size returns the width and height given to NewFakeScreen().
