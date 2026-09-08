@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/walles/twin"
+	"github.com/j-ole/twin"
 )
 
 func main() {
@@ -46,7 +46,7 @@ func draw(screen twin.Screen) {
 
 	drawText(screen, 2, 1, "Hello, 世界!", titleStyle)
 	column := drawText(screen, 2, 2, "Drawn with ", bodyStyle)
-	drawText(screen, column, 2, "github.com/walles/twin", linkStyle)
+	drawText(screen, column, 2, "github.com/j-ole/twin", linkStyle)
 	drawText(screen, 2, 3, "Press any key to exit", bodyStyle)
 
 	drawGradientBackground(screen)

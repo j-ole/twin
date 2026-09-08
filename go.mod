@@ -1,4 +1,4 @@
-module github.com/walles/twin
+module github.com/j-ole/twin
 
 // Bumping this might let us delete the unicodePost15PrintableRanges hack in
 // styledRune.go, once the minimum Go version's unicode.Version has caught up
